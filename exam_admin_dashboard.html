@@ -1,0 +1,948 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --navy:#0f2344;--navy2:#1a3460;--navy3:#243d70;
+  --gold:#c9a84c;--gold-light:#f0d080;--gold-pale:#fdf4dc;
+  --cream:#fdf8f0;--white:#ffffff;
+  --gray:#e8e4dc;--gray2:#f4f0e8;--gray3:#f9f7f3;
+  --text:#1a1a2e;--muted:#6b6b80;
+  --success:#1a7a4a;--success-bg:#eaf6ef;
+  --error:#b83232;--warning:#b87032;--warning-bg:#fef6ed;
+  --radius:10px;--radius-lg:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ANIMATED HEADER */
+.header{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 60%,var(--navy3) 100%);
+  color:#fff;padding:0 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  height:76px;position:relative;overflow:hidden;
+}
+.header::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(255,255,255,.015) 60px,rgba(255,255,255,.015) 61px);
+  animation:slideLines 8s linear infinite;
+}
+@keyframes slideLines{from{background-position:0 0}to{background-position:61px 0}}
+.header-left{display:flex;align-items:center;gap:1.2rem;z-index:1;}
+.header-logo{
+  width:48px;height:48px;background:var(--gold);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--navy);
+  box-shadow:0 0 0 3px rgba(201,168,76,.3);
+  animation:logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse{0%,100%{box-shadow:0 0 0 3px rgba(201,168,76,.3)}50%{box-shadow:0 0 0 6px rgba(201,168,76,.15)}}
+.header-text h1{font-family:'DM Serif Display',serif;font-size:1.15rem;}
+.header-text p{font-size:.78rem;color:#a8b8d0;margin-top:2px;}
+.header-badge{background:var(--gold);color:var(--navy);padding:.3rem .9rem;border-radius:20px;font-size:.78rem;font-weight:700;letter-spacing:.5px;z-index:1;}
+.header-right{display:flex;gap:.8rem;align-items:center;z-index:1;}
+
+/* TABS */
+.tabs-bar{background:var(--white);border-bottom:2px solid var(--gray);display:flex;padding:0 2rem;gap:0;overflow-x:auto;}
+.tab-btn{
+  padding:1rem 1.4rem;border:none;background:none;
+  font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:500;
+  color:var(--muted);cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-2px;
+  transition:all .2s;display:flex;align-items:center;gap:.4rem;white-space:nowrap;
+}
+.tab-btn:hover{color:var(--navy);}
+.tab-btn.active{color:var(--navy);font-weight:700;border-bottom-color:var(--gold);}
+
+/* CONTAINER */
+.container{max-width:1240px;margin:0 auto;padding:2rem 1.5rem 5rem;}
+.tab-panel{display:none;animation:fadeIn .3s ease;}
+.tab-panel.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.5rem;}
+.stat-card{
+  background:var(--white);border:1px solid var(--gray);border-radius:var(--radius);
+  padding:1.2rem 1.5rem;box-shadow:0 1px 8px rgba(0,0,0,.05);
+  transition:transform .2s,box-shadow .2s;cursor:default;position:relative;overflow:hidden;
+}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--gray);}
+.stat-card.c1::after{background:linear-gradient(90deg,var(--gold),var(--gold-light));}
+.stat-card.c2::after{background:linear-gradient(90deg,#1a7a4a,#2ab36d);}
+.stat-card.c3::after{background:linear-gradient(90deg,#3560b0,#5a88e0);}
+.stat-card.c4::after{background:linear-gradient(90deg,#b87032,#e8a050);}
+.stat-card.c5::after{background:linear-gradient(90deg,#8040b0,#b070e0);}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.1);}
+.stat-val{font-family:'DM Serif Display',serif;font-size:2rem;color:var(--navy);line-height:1;transition:all .5s;}
+.stat-label{font-size:.75rem;color:var(--muted);margin-top:.3rem;text-transform:uppercase;letter-spacing:.4px;}
+.stat-icon{font-size:1.4rem;margin-bottom:.4rem;}
+
+/* FILTER BAR */
+.filter-bar{
+  background:var(--white);border:1px solid var(--gray);border-radius:var(--radius);
+  padding:1.2rem 1.5rem;display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;
+  margin-bottom:1.5rem;box-shadow:0 1px 8px rgba(0,0,0,.05);
+}
+.filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:130px;}
+.filter-group label{font-size:.72rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;}
+.filter-group select,.filter-group input{
+  padding:.5rem .8rem;border:1.5px solid var(--gray);border-radius:7px;
+  font-family:'DM Sans',sans-serif;font-size:.85rem;background:var(--gray2);color:var(--text);
+}
+.filter-group select:focus,.filter-group input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,.15);}
+
+/* BUTTONS */
+.btn{padding:.6rem 1.3rem;border-radius:7px;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.4rem;}
+.btn-primary{background:var(--navy);color:#fff;}
+.btn-primary:hover{background:var(--navy2);}
+.btn-gold{background:var(--gold);color:var(--navy);}
+.btn-gold:hover{background:var(--gold-light);}
+.btn-sm{padding:.38rem .9rem;font-size:.78rem;}
+.btn-ghost{background:transparent;border:1.5px solid var(--gray);color:var(--navy);}
+.btn-ghost:hover{background:var(--gray);}
+.btn-success{background:#1a7a4a;color:#fff;}
+.btn-success:hover{background:#15643e;}
+.btn-danger{background:#b83232;color:#fff;}
+.btn-danger:hover{background:#962a2a;}
+
+/* TABLE */
+.table-wrapper{background:var(--white);border:1px solid var(--gray);border-radius:var(--radius);overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.05);}
+.table-header{padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--gray);}
+.table-title{font-family:'DM Serif Display',serif;font-size:1rem;color:var(--navy);}
+table{width:100%;border-collapse:collapse;font-size:.85rem;}
+thead th{background:var(--navy);color:#fff;padding:.65rem 1rem;text-align:left;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--gray);transition:background .15s;}
+tbody tr:hover{background:var(--gray2);}
+tbody tr:last-child{border-bottom:none;}
+td{padding:.68rem 1rem;color:var(--text);}
+
+/* BADGES */
+.badge{display:inline-block;padding:.2rem .65rem;border-radius:20px;font-size:.73rem;font-weight:700;}
+.badge-fn{background:#e0f0ff;color:#1a4080;}
+.badge-an{background:#fff0e0;color:#804010;}
+.badge-done{background:var(--success-bg);color:var(--success);}
+.badge-partial{background:var(--warning-bg);color:var(--warning);}
+.file-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.25rem .65rem;border-radius:5px;font-size:.75rem;font-weight:600;text-decoration:none;cursor:pointer;border:1.5px solid;transition:all .2s;}
+.file-btn-excel{color:var(--success);border-color:var(--success);}
+.file-btn-excel:hover{background:var(--success-bg);}
+.file-btn-word{color:#2060a0;border-color:#2060a0;}
+.file-btn-word:hover{background:#e8f0ff;}
+
+/* CHARTS SECTION */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;}
+.chart-card{background:var(--white);border:1px solid var(--gray);border-radius:var(--radius-lg);padding:1.5rem;box-shadow:0 1px 8px rgba(0,0,0,.05);}
+.chart-title{font-family:'DM Serif Display',serif;font-size:.95rem;color:var(--navy);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+.chart-full{grid-column:1/-1;}
+
+/* LOADING */
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(15,35,68,.45);z-index:999;align-items:center;justify-content:center;}
+.loading-overlay.show{display:flex;}
+.loading-box{background:var(--white);border-radius:var(--radius);padding:2.5rem 3.5rem;text-align:center;}
+.spinner{width:44px;height:44px;border:4px solid var(--gray);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1.2rem;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* PROGRESS BAR */
+.prog-bar{background:var(--gray);border-radius:4px;height:8px;overflow:hidden;margin-top:.5rem;}
+.prog-fill{height:100%;border-radius:4px;transition:width 1s ease;background:linear-gradient(90deg,var(--gold),var(--gold-light));}
+
+/* DEPT BREAKDOWN */
+.dept-row{display:flex;align-items:center;gap:.8rem;padding:.6rem 0;border-bottom:1px solid var(--gray);}
+.dept-row:last-child{border-bottom:none;}
+.dept-name{font-size:.85rem;font-weight:500;width:80px;color:var(--navy);}
+.dept-bar-wrap{flex:1;}
+.dept-count{font-size:.8rem;color:var(--muted);width:30px;text-align:right;}
+
+/* REPORT STYLES */
+.report-wrapper{background:var(--white);border:1px solid var(--gray);border-radius:var(--radius-lg);overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.07);}
+.report-letterhead{
+  background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);
+  color:#fff;padding:2rem 2.5rem;text-align:center;position:relative;overflow:hidden;
+}
+.report-letterhead::before{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(45deg,transparent,transparent 20px,rgba(255,255,255,.02) 20px,rgba(255,255,255,.02) 21px);
+}
+.lh-emblem{width:64px;height:64px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--navy);margin:0 auto 1rem;border:3px solid rgba(255,255,255,.2);z-index:1;position:relative;}
+.lh-college{font-family:'DM Serif Display',serif;font-size:1.4rem;letter-spacing:.5px;z-index:1;position:relative;}
+.lh-sub{font-size:.85rem;color:#a8b8d0;margin-top:.3rem;z-index:1;position:relative;}
+.lh-dept{font-size:.9rem;color:var(--gold-light);margin-top:.2rem;font-weight:600;z-index:1;position:relative;}
+.lh-divider{border:none;border-top:1px solid rgba(255,255,255,.2);margin:1rem 0;z-index:1;position:relative;}
+.lh-report-title{font-size:1.1rem;font-weight:700;letter-spacing:.3px;z-index:1;position:relative;}
+.lh-meta{font-size:.8rem;color:#a8b8d0;margin-top:.3rem;z-index:1;position:relative;}
+
+.report-body{padding:2rem 2.5rem;}
+.report-section{margin-bottom:2rem;}
+.report-section-title{font-family:'DM Serif Display',serif;font-size:1rem;color:var(--navy);border-bottom:2px solid var(--gold);padding-bottom:.4rem;margin-bottom:1rem;}
+
+/* SUMMARY STATS IN REPORT */
+.report-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+.rs-card{border:1px solid var(--gray);border-radius:var(--radius);padding:1rem;text-align:center;}
+.rs-val{font-family:'DM Serif Display',serif;font-size:1.8rem;color:var(--navy);}
+.rs-label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:.2rem;}
+
+/* COMPLIANCE TABLE */
+.comp-table table{width:100%;}
+.comp-table th{background:var(--navy);color:#fff;padding:.6rem 1rem;font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;}
+.comp-table td{padding:.6rem 1rem;border:1px solid var(--gray);font-size:.83rem;}
+.comp-table tr:nth-child(even){background:var(--gray3);}
+
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.9rem;}
+.empty-icon{font-size:2.5rem;margin-bottom:.5rem;}
+
+/* ANIMATIONS FOR COUNTERS */
+@keyframes countUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.stat-val.animate{animation:countUp .5s ease forwards;}
+
+/* SECTION HEADER */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.section-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--navy);}
+
+/* INSIGHT STRIP */
+.insight-strip{
+  background:linear-gradient(90deg,var(--navy),var(--navy2));
+  color:#fff;border-radius:var(--radius);padding:1rem 1.5rem;
+  margin-bottom:1.5rem;display:flex;gap:2rem;flex-wrap:wrap;
+  box-shadow:0 2px 12px rgba(15,35,68,.2);
+}
+.insight-item{flex:1;min-width:120px;}
+.insight-val{font-family:'DM Serif Display',serif;font-size:1.4rem;color:var(--gold-light);}
+.insight-label{font-size:.75rem;color:#a8b8d0;margin-top:.2rem;}
+
+@media(max-width:900px){
+  .stats-row{grid-template-columns:1fr 1fr 1fr;}
+  .charts-grid{grid-template-columns:1fr;}
+  .report-stats{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:600px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .header{padding:0 1rem;}
+}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div style="font-weight:600;color:var(--navy);" id="loadingMsg">Loading data…</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">K</div>
+    <div class="header-text">
+      <h1>Kamaraj College of Engineering &amp; Technology</h1>
+      <p>Controller of Examination Office — Practical End Semester Tracker</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-ghost" onclick="refreshAll()" style="color:#fff;border-color:rgba(255,255,255,.3);">↻ Refresh</button>
+    <span class="header-badge">ADMIN</span>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('tracking',this)">📊 Submission Tracking</button>
+  <button class="tab-btn" onclick="switchTab('analytics',this)">📈 Analytics</button>
+  <button class="tab-btn" onclick="switchTab('files',this)">📁 File Viewer</button>
+  <button class="tab-btn" onclick="switchTab('report',this)">📋 Exam Report</button>
+</div>
+
+<div class="container">
+
+<!-- ===== TAB 1: TRACKING ===== -->
+<div class="tab-panel active" id="tab-tracking">
+  <div class="stats-row">
+    <div class="stat-card c1"><div class="stat-icon">📥</div><div class="stat-val" id="stat-total">–</div><div class="stat-label">Total Submissions</div></div>
+    <div class="stat-card c2"><div class="stat-icon">📅</div><div class="stat-val" id="stat-today">–</div><div class="stat-label">Today's Submissions</div></div>
+    <div class="stat-card c3"><div class="stat-icon">🏛️</div><div class="stat-val" id="stat-depts">–</div><div class="stat-label">Departments</div></div>
+    <div class="stat-card c4"><div class="stat-icon">📚</div><div class="stat-val" id="stat-courses">–</div><div class="stat-label">Unique Courses</div></div>
+    <div class="stat-card c5"><div class="stat-icon">✅</div><div class="stat-val" id="stat-complete">–</div><div class="stat-label">Complete (Both Files)</div></div>
+  </div>
+
+  <!-- INSIGHT STRIP -->
+  <div class="insight-strip">
+    <div class="insight-item"><div class="insight-val" id="ins-fn">–</div><div class="insight-label">FN Submissions</div></div>
+    <div class="insight-item"><div class="insight-val" id="ins-an">–</div><div class="insight-label">AN Submissions</div></div>
+    <div class="insight-item"><div class="insight-val" id="ins-rate">–</div><div class="insight-label">Completion Rate</div></div>
+    <div class="insight-item"><div class="insight-val" id="ins-pending">–</div><div class="insight-label">Pending (Partial)</div></div>
+    <div class="insight-item"><div class="insight-val" id="ins-faculty">–</div><div class="insight-label">Faculty Submitted</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group"><label>Date From</label><input type="date" id="t-dateFrom"/></div>
+    <div class="filter-group"><label>Date To</label><input type="date" id="t-dateTo"/></div>
+    <div class="filter-group"><label>Department</label><select id="t-dept"><option value="">All Departments</option></select></div>
+    <div class="filter-group"><label>Year</label>
+      <select id="t-year"><option value="">All Years</option><option>I</option><option>II</option><option>III</option><option>IV</option></select>
+    </div>
+    <div class="filter-group"><label>Session</label>
+      <select id="t-session"><option value="">All</option><option value="FN">FN</option><option value="AN">AN</option></select>
+    </div>
+    <div class="filter-group"><label>Status</label>
+      <select id="t-status"><option value="">All</option><option value="complete">Complete</option><option value="partial">Partial</option></select>
+    </div>
+    <button class="btn btn-primary" onclick="applyTrackingFilter()">🔍 Filter</button>
+    <button class="btn btn-ghost" onclick="clearTrackingFilter()">✖ Clear</button>
+    <button class="btn btn-gold btn-sm" onclick="exportCSV()">⬇ CSV</button>
+    <button class="btn btn-success btn-sm" onclick="exportExcelFull()">⬇ Excel Report</button>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="table-header">
+      <span class="table-title">Submission Records</span>
+      <span id="rowCount" style="font-size:.82rem;color:var(--muted);"></span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>S.No</th><th>Faculty Name</th><th>Department</th><th>Year</th><th>Sem</th>
+            <th>Course Code</th><th>Course Name</th><th>Date</th><th>Session</th>
+            <th>Name List</th><th>Question</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="trackingBody">
+          <tr><td colspan="12"><div class="empty-state"><div class="empty-icon">📭</div>Loading…</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB 2: ANALYTICS ===== -->
+<div class="tab-panel" id="tab-analytics">
+  <div class="filter-bar">
+    <div class="filter-group"><label>Date From</label><input type="date" id="a-dateFrom"/></div>
+    <div class="filter-group"><label>Date To</label><input type="date" id="a-dateTo"/></div>
+    <div class="filter-group"><label>Department</label><select id="a-dept"><option value="">All Departments</option></select></div>
+    <button class="btn btn-primary" onclick="renderAnalytics()">📈 Analyse</button>
+    <button class="btn btn-ghost" onclick="clearAnalyticsFilter()">✖ Clear</button>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">🏛️ Submissions by Department</div>
+      <div style="position:relative;height:260px;"><canvas id="deptChart" role="img" aria-label="Bar chart of submissions by department"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">⏰ FN vs AN Sessions</div>
+      <div style="position:relative;height:260px;"><canvas id="sessionChart" role="img" aria-label="Doughnut chart of FN vs AN sessions"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">📅 Submissions Over Time</div>
+      <div style="position:relative;height:260px;"><canvas id="timeChart" role="img" aria-label="Line chart of submissions over time"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🎓 Year-wise Distribution</div>
+      <div style="position:relative;height:260px;"><canvas id="yearChart" role="img" aria-label="Bar chart of year wise distribution"></canvas></div>
+    </div>
+    <div class="chart-card chart-full">
+      <div class="chart-title">✅ Compliance Status by Department</div>
+      <div id="complianceChart"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB 3: FILE VIEWER ===== -->
+<div class="tab-panel" id="tab-files">
+  <div class="filter-bar">
+    <div class="filter-group"><label>Date</label><input type="date" id="f-date"/></div>
+    <div class="filter-group"><label>Session</label>
+      <select id="f-session"><option value="">All Sessions</option><option value="FN">FN – Forenoon</option><option value="AN">AN – Afternoon</option></select>
+    </div>
+    <div class="filter-group"><label>Department</label><select id="f-dept"><option value="">All Departments</option></select></div>
+    <button class="btn btn-primary" onclick="applyFileFilter()">🔍 Filter</button>
+    <button class="btn btn-ghost" onclick="clearFileFilter()">✖ Clear</button>
+  </div>
+  <div id="fileViewerContent"><div class="empty-state"><div class="empty-icon">📁</div>Select filters to view files</div></div>
+</div>
+
+<!-- ===== TAB 4: REPORT ===== -->
+<div class="tab-panel" id="tab-report">
+  <div class="filter-bar">
+    <div class="filter-group"><label>Report Date *</label><input type="date" id="r-date"/></div>
+    <div class="filter-group"><label>Department</label><select id="r-dept"><option value="">All Departments</option></select></div>
+    <button class="btn btn-primary" onclick="generateReport()">📋 Generate</button>
+    <button class="btn btn-gold" onclick="exportReportPDF()">🖨 Print / PDF</button>
+    <button class="btn btn-success" onclick="exportReportExcel()">📊 Export Excel</button>
+  </div>
+  <div id="reportContent"></div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbx8BKA6eopUe7-957LjfD5L9wO5hdFkrZfj4NzGF_53YZ4gnTfYBk38Py-D4iNQmy46/exec";
+
+let allData = [];
+let filteredData = [];
+let chartInstances = {};
+
+// ── INIT ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  ['t-dateTo','f-date','r-date'].forEach(id => { const el=document.getElementById(id); if(el) el.value=today; });
+  loadAllData();
+});
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='analytics') setTimeout(renderAnalytics,100);
+}
+
+function showLoading(msg){ document.getElementById('loadingMsg').textContent=msg||'Loading…'; document.getElementById('loadingOverlay').classList.add('show'); }
+function hideLoading(){ document.getElementById('loadingOverlay').classList.remove('show'); }
+
+// ── DATA LOAD ──────────────────────────────────────────────
+async function loadAllData() {
+  showLoading('Fetching submissions from Google Sheets…');
+  try {
+    const res = await fetch(`${GAS_URL}?action=getResponses`);
+    const data = await res.json();
+    allData = data.responses || [];
+    filteredData = [...allData];
+    populateDeptFilters(allData);
+    animateStats(allData);
+    renderTrackingTable(allData);
+  } catch(e) {
+    document.getElementById('trackingBody').innerHTML = `<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">⚠️</div>Failed to load data. Check network/GAS URL.</div></td></tr>`;
+  } finally { hideLoading(); }
+}
+function refreshAll(){ loadAllData(); }
+
+function populateDeptFilters(data) {
+  const depts = [...new Set(data.map(r => r.department))].filter(Boolean).sort();
+  ['t-dept','f-dept','r-dept','a-dept'].forEach(id => {
+    const sel = document.getElementById(id);
+    if(!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">All Departments</option>`;
+    depts.forEach(d => { const o=document.createElement('option'); o.value=d; o.textContent=d; sel.appendChild(o); });
+    sel.value = cur;
+  });
+}
+
+// ── ANIMATED STATS ─────────────────────────────────────────
+function animateStats(data) {
+  const today = new Date().toISOString().split('T')[0];
+  const complete = data.filter(r => r.excelLink && r.wordLink).length;
+  const fn = data.filter(r => r.session==='FN').length;
+  const an = data.filter(r => r.session==='AN').length;
+  const pending = data.filter(r => !(r.excelLink && r.wordLink)).length;
+  const faculty = new Set(data.map(r => r.facultyName)).size;
+  const rate = data.length ? Math.round((complete/data.length)*100) : 0;
+
+  animateCount('stat-total', data.length);
+  animateCount('stat-today', data.filter(r => r.examDate===today).length);
+  animateCount('stat-depts', new Set(data.map(r=>r.department)).size);
+  animateCount('stat-courses', new Set(data.map(r=>r.courseCode)).size);
+  animateCount('stat-complete', complete);
+
+  document.getElementById('ins-fn').textContent = fn;
+  document.getElementById('ins-an').textContent = an;
+  document.getElementById('ins-rate').textContent = rate+'%';
+  document.getElementById('ins-pending').textContent = pending;
+  document.getElementById('ins-faculty').textContent = faculty;
+}
+
+function animateCount(id, target) {
+  const el = document.getElementById(id);
+  if(!el) return;
+  let start = 0;
+  const dur = 800;
+  const step = target / (dur/16);
+  el.classList.add('animate');
+  const tick = () => {
+    start = Math.min(start + step, target);
+    el.textContent = Math.round(start);
+    if(start < target) requestAnimationFrame(tick);
+    else el.textContent = target;
+  };
+  requestAnimationFrame(tick);
+}
+
+// ── TRACKING TABLE ──────────────────────────────────────────
+function applyTrackingFilter() {
+  const dateFrom = document.getElementById('t-dateFrom').value;
+  const dateTo = document.getElementById('t-dateTo').value;
+  const dept = document.getElementById('t-dept').value;
+  const year = document.getElementById('t-year').value;
+  const session = document.getElementById('t-session').value;
+  const status = document.getElementById('t-status').value;
+  filteredData = allData.filter(r => {
+    if(dateFrom && r.examDate < dateFrom) return false;
+    if(dateTo && r.examDate > dateTo) return false;
+    if(dept && r.department !== dept) return false;
+    if(year && r.year !== year) return false;
+    if(session && r.session !== session) return false;
+    if(status==='complete' && !(r.excelLink && r.wordLink)) return false;
+    if(status==='partial' && (r.excelLink && r.wordLink)) return false;
+    return true;
+  });
+  animateStats(filteredData);
+  renderTrackingTable(filteredData);
+}
+
+function clearTrackingFilter() {
+  ['t-dateFrom','t-dateTo','t-dept','t-year','t-session','t-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  filteredData = [...allData];
+  animateStats(allData);
+  renderTrackingTable(allData);
+}
+
+function renderTrackingTable(data) {
+  const tbody = document.getElementById('trackingBody');
+  const countEl = document.getElementById('rowCount');
+  if(countEl) countEl.textContent = data.length + ' record' + (data.length!==1?'s':'');
+  if(!data.length){
+    tbody.innerHTML=`<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">📭</div>No records found.</div></td></tr>`;
+    return;
+  }
+  const sorted = [...data].sort((a,b) => b.examDate.localeCompare(a.examDate));
+  tbody.innerHTML = sorted.map((r,i) => `
+    <tr style="animation:fadeIn .3s ease ${i*0.02}s both">
+      <td>${r.sno||i+1}</td>
+      <td><strong>${r.facultyName||''}</strong></td>
+      <td>${r.department||''}</td>
+      <td>${r.year||''}</td>
+      <td>${r.semester||''}</td>
+      <td><code style="background:var(--gray2);padding:.12rem .4rem;border-radius:4px;font-size:.8rem;">${r.courseCode||''}</code></td>
+      <td style="max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${r.courseName||''}">${r.courseName||''}</td>
+      <td style="white-space:nowrap;">${formatDate(r.examDate)}</td>
+      <td><span class="badge ${r.session==='FN'?'badge-fn':'badge-an'}">${r.session||''}</span></td>
+      <td>${r.excelLink?`<a class="file-btn file-btn-excel" href="${r.excelLink}" target="_blank">📊 Excel</a>`:`<span style="color:var(--muted);font-size:.78rem;">–</span>`}</td>
+      <td>${r.wordLink?`<a class="file-btn file-btn-word" href="${r.wordLink}" target="_blank">📝 Word</a>`:`<span style="color:var(--muted);font-size:.78rem;">–</span>`}</td>
+      <td><span class="badge ${(r.excelLink&&r.wordLink)?'badge-done':'badge-partial'}">${(r.excelLink&&r.wordLink)?'✅ Complete':'⏳ Partial'}</span></td>
+    </tr>`).join('');
+}
+
+// ── ANALYTICS ──────────────────────────────────────────────
+function clearAnalyticsFilter(){['a-dateFrom','a-dateTo','a-dept'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});renderAnalytics();}
+
+function getAnalyticsData(){
+  const from=document.getElementById('a-dateFrom').value;
+  const to=document.getElementById('a-dateTo').value;
+  const dept=document.getElementById('a-dept').value;
+  return allData.filter(r=>{
+    if(from&&r.examDate<from)return false;
+    if(to&&r.examDate>to)return false;
+    if(dept&&r.department!==dept)return false;
+    return true;
+  });
+}
+
+function renderAnalytics(){
+  const data = getAnalyticsData();
+  renderDeptChart(data);
+  renderSessionChart(data);
+  renderTimeChart(data);
+  renderYearChart(data);
+  renderComplianceChart(data);
+}
+
+function destroyChart(id){
+  if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];}
+}
+
+function renderDeptChart(data){
+  destroyChart('deptChart');
+  const counts={};
+  data.forEach(r=>{counts[r.department]=(counts[r.department]||0)+1;});
+  const labels=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  const values=labels.map(l=>counts[l]);
+  const colors=['#0f2344','#1a3460','#c9a84c','#1a7a4a','#3560b0','#b87032','#8040b0','#b83232','#2080a0','#607060'];
+  chartInstances['deptChart'] = new Chart(document.getElementById('deptChart'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Submissions',data:values,backgroundColor:colors.slice(0,labels.length),borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+}
+
+function renderSessionChart(data){
+  destroyChart('sessionChart');
+  const fn=data.filter(r=>r.session==='FN').length;
+  const an=data.filter(r=>r.session==='AN').length;
+  chartInstances['sessionChart'] = new Chart(document.getElementById('sessionChart'),{
+    type:'doughnut',
+    data:{labels:['Forenoon (FN)','Afternoon (AN)'],datasets:[{data:[fn,an],backgroundColor:['#0f2344','#c9a84c'],borderWidth:0,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{padding:16,font:{size:12}}}}}
+  });
+}
+
+function renderTimeChart(data){
+  destroyChart('timeChart');
+  const counts={};
+  data.forEach(r=>{counts[r.examDate]=(counts[r.examDate]||0)+1;});
+  const labels=Object.keys(counts).sort();
+  const values=labels.map(l=>counts[l]);
+  chartInstances['timeChart'] = new Chart(document.getElementById('timeChart'),{
+    type:'line',
+    data:{labels:labels.map(d=>formatDate(d)),datasets:[{label:'Submissions',data:values,borderColor:'#c9a84c',backgroundColor:'rgba(201,168,76,.12)',fill:true,tension:.4,pointBackgroundColor:'#c9a84c',pointRadius:5}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}},x:{ticks:{maxRotation:45,autoSkip:false}}}}
+  });
+}
+
+function renderYearChart(data){
+  destroyChart('yearChart');
+  const ord=['I','II','III','IV'];
+  const counts={};
+  data.forEach(r=>{counts[r.year]=(counts[r.year]||0)+1;});
+  const labels=ord.filter(y=>counts[y]);
+  const values=labels.map(l=>counts[l]);
+  chartInstances['yearChart'] = new Chart(document.getElementById('yearChart'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Submissions',data:values,backgroundColor:['#0f2344','#1a3460','#c9a84c','#1a7a4a'],borderRadius:6,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}
+  });
+}
+
+function renderComplianceChart(data){
+  const depts=[...new Set(data.map(r=>r.department))].filter(Boolean).sort();
+  const el=document.getElementById('complianceChart');
+  if(!depts.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div>No data.</div>';return;}
+  el.innerHTML = depts.map(d=>{
+    const rows=data.filter(r=>r.department===d);
+    const done=rows.filter(r=>r.excelLink&&r.wordLink).length;
+    const pct=rows.length?Math.round((done/rows.length)*100):0;
+    const color=pct===100?'#1a7a4a':pct>=60?'#c9a84c':'#b83232';
+    return `<div class="dept-row">
+      <div class="dept-name" title="${d}">${d}</div>
+      <div class="dept-bar-wrap">
+        <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${color};"></div></div>
+      </div>
+      <div class="dept-count">${done}/${rows.length}</div>
+      <div style="width:42px;text-align:right;font-size:.78rem;font-weight:700;color:${color};">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ── FILE VIEWER ──────────────────────────────────────────────
+function applyFileFilter(){
+  const date=document.getElementById('f-date').value;
+  const session=document.getElementById('f-session').value;
+  const dept=document.getElementById('f-dept').value;
+  let filtered=[...allData];
+  if(date) filtered=filtered.filter(r=>r.examDate===date);
+  if(session) filtered=filtered.filter(r=>r.session===session);
+  if(dept) filtered=filtered.filter(r=>r.department===dept);
+  renderFileViewer(filtered);
+}
+function clearFileFilter(){['f-date','f-session','f-dept'].forEach(id=>{document.getElementById(id).value='';});document.getElementById('fileViewerContent').innerHTML='<div class="empty-state"><div class="empty-icon">📁</div>Select filters to view files.</div>';}
+
+function renderFileViewer(data){
+  const content=document.getElementById('fileViewerContent');
+  if(!data.length){content.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div>No files found.</div>';return;}
+  const grouped={};
+  data.forEach(r=>{
+    if(!grouped[r.examDate]) grouped[r.examDate]={};
+    if(!grouped[r.examDate][r.session]) grouped[r.examDate][r.session]=[];
+    grouped[r.examDate][r.session].push(r);
+  });
+  let html='';
+  Object.keys(grouped).sort().reverse().forEach(dk=>{
+    html+=`<div style="margin-bottom:1.5rem;"><div style="background:var(--navy);color:#fff;padding:.5rem 1rem;font-family:'DM Serif Display',serif;font-size:.95rem;border-radius:8px 8px 0 0;">📅 ${formatDate(dk)}</div>`;
+    ['FN','AN'].forEach(sess=>{
+      if(!grouped[dk][sess]) return;
+      html+=`<div style="background:var(--gold-pale);padding:.35rem 1rem;font-size:.8rem;font-weight:700;color:var(--navy);">⏰ ${sess==='FN'?'Forenoon (FN)':'Afternoon (AN)'}</div>`;
+      html+=`<div class="table-wrapper" style="border-radius:0;border-top:none;"><div style="overflow-x:auto;"><table><thead><tr><th>Department</th><th>Year</th><th>Sem</th><th>Course Code</th><th>Course Name</th><th>Faculty</th><th>Name List</th><th>Question</th></tr></thead><tbody>`;
+      grouped[dk][sess].forEach(r=>{
+        html+=`<tr>
+          <td>${r.department}</td><td>${r.year}</td><td>${r.semester}</td>
+          <td><code style="background:var(--gray2);padding:.1rem .35rem;border-radius:4px;">${r.courseCode}</code></td>
+          <td>${r.courseName}</td><td>${r.facultyName}</td>
+          <td>${r.excelLink?`<a class="file-btn file-btn-excel" href="${r.excelLink}" target="_blank">⬇ Excel</a>`:'<span style="color:var(--muted);font-size:.78rem;">Not uploaded</span>'}</td>
+          <td>${r.wordLink?`<a class="file-btn file-btn-word" href="${r.wordLink}" target="_blank">⬇ Word</a>`:'<span style="color:var(--muted);font-size:.78rem;">Not uploaded</span>'}</td>
+        </tr>`;
+      });
+      html+=`</tbody></table></div></div>`;
+    });
+    html+=`</div>`;
+  });
+  content.innerHTML=html;
+}
+
+// ── REPORT ──────────────────────────────────────────────────
+let currentReportData = [];
+let currentReportDate = '';
+let currentReportDept = '';
+
+function generateReport(){
+  const date=document.getElementById('r-date').value;
+  const dept=document.getElementById('r-dept').value;
+  if(!date){alert('Please select a date.');return;}
+  currentReportDate=date; currentReportDept=dept;
+  let filtered=allData.filter(r=>r.examDate===date);
+  if(dept) filtered=filtered.filter(r=>r.department===dept);
+  currentReportData=filtered;
+  renderReport(filtered,date,dept);
+}
+
+function renderReport(data,date,dept){
+  const el=document.getElementById('reportContent');
+  if(!data.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div>No submissions found.</div>';return;}
+  const bySession={'FN':data.filter(r=>r.session==='FN'),'AN':data.filter(r=>r.session==='AN')};
+  const complete=data.filter(r=>r.excelLink&&r.wordLink).length;
+  const rate=data.length?Math.round((complete/data.length)*100):0;
+  const depts=[...new Set(data.map(r=>r.department))].length;
+
+  let html=`<div id="printArea" class="report-wrapper">
+    <div class="report-letterhead">
+      <div class="lh-emblem">K</div>
+      <div class="lh-college">Kamaraj College of Engineering and Technology</div>
+      <div class="lh-sub">(An Autonomous Institution)</div>
+      <div class="lh-dept">Controller of Examination Office</div>
+      <hr class="lh-divider">
+      <div class="lh-report-title">Practical End Semester Examination — Submission Report</div>
+      <div class="lh-meta">Date: ${formatDate(date)}${dept?' | Department: '+dept:' | All Departments'} | Generated: ${new Date().toLocaleString('en-IN')}</div>
+    </div>
+    <div class="report-body">
+      <div class="report-section">
+        <div class="report-section-title">Executive Summary</div>
+        <div class="report-stats">
+          <div class="rs-card"><div class="rs-val">${data.length}</div><div class="rs-label">Total Submissions</div></div>
+          <div class="rs-card"><div class="rs-val">${bySession['FN'].length}</div><div class="rs-label">FN Sessions</div></div>
+          <div class="rs-card"><div class="rs-val">${bySession['AN'].length}</div><div class="rs-label">AN Sessions</div></div>
+          <div class="rs-card"><div class="rs-val">${depts}</div><div class="rs-label">Departments</div></div>
+          <div class="rs-card"><div class="rs-val">${complete}</div><div class="rs-label">Complete Submissions</div></div>
+          <div class="rs-card"><div class="rs-val">${data.length-complete}</div><div class="rs-label">Partial Submissions</div></div>
+          <div class="rs-card"><div class="rs-val">${rate}%</div><div class="rs-label">Compliance Rate</div></div>
+          <div class="rs-card"><div class="rs-val">${new Set(data.map(r=>r.facultyName)).size}</div><div class="rs-label">Faculty Submitted</div></div>
+        </div>
+      </div>`;
+
+  ['FN','AN'].forEach(sess=>{
+    if(!bySession[sess].length) return;
+    html+=`<div class="report-section">
+      <div class="report-section-title">${sess==='FN'?'☀️ Forenoon Session (FN)':'🌆 Afternoon Session (AN)'}</div>
+      <div class="comp-table"><table><thead><tr>
+        <th>S.No</th><th>Course Code</th><th>Course Name</th><th>Department</th><th>Year</th><th>Sem</th><th>Faculty</th><th>Name List</th><th>Question</th><th>Status</th>
+      </tr></thead><tbody>`;
+    bySession[sess].sort((a,b)=>a.department.localeCompare(b.department)).forEach((r,i)=>{
+      const done=r.excelLink&&r.wordLink;
+      html+=`<tr>
+        <td>${i+1}</td>
+        <td style="font-weight:600;">${r.courseCode}</td>
+        <td>${r.courseName}</td>
+        <td>${r.department}</td>
+        <td>${r.year}</td>
+        <td>${r.semester}</td>
+        <td>${r.facultyName}</td>
+        <td style="text-align:center;">${r.excelLink?'✅':'❌'}</td>
+        <td style="text-align:center;">${r.wordLink?'✅':'❌'}</td>
+        <td style="text-align:center;"><span style="font-size:.75rem;font-weight:700;color:${done?'#1a7a4a':'#b87032'};">${done?'Complete':'Partial'}</span></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+  });
+
+  // Department-wise compliance
+  const deptList=[...new Set(data.map(r=>r.department))].sort();
+  html+=`<div class="report-section">
+    <div class="report-section-title">📊 Department-wise Compliance</div>
+    <div class="comp-table"><table><thead><tr>
+      <th>Department</th><th>Total</th><th>FN</th><th>AN</th><th>Complete</th><th>Partial</th><th>Compliance %</th>
+    </tr></thead><tbody>`;
+  deptList.forEach(d=>{
+    const rows=data.filter(r=>r.department===d);
+    const fnR=rows.filter(r=>r.session==='FN').length;
+    const anR=rows.filter(r=>r.session==='AN').length;
+    const done=rows.filter(r=>r.excelLink&&r.wordLink).length;
+    const pct=rows.length?Math.round((done/rows.length)*100):0;
+    const color=pct===100?'#1a7a4a':pct>=60?'#b87032':'#b83232';
+    html+=`<tr><td>${d}</td><td>${rows.length}</td><td>${fnR}</td><td>${anR}</td><td>${done}</td><td>${rows.length-done}</td><td style="font-weight:700;color:${color};">${pct}%</td></tr>`;
+  });
+  html+=`</tbody></table></div></div>`;
+
+  html+=`<div style="margin-top:3rem;border-top:1px solid var(--gray);padding-top:1.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;font-size:.82rem;color:var(--muted);text-align:center;">
+    <div><div style="border-top:1.5px solid var(--navy);padding-top:.5rem;margin-top:3rem;font-weight:600;color:var(--navy);">Prepared by</div><div>Examination Cell</div></div>
+    <div><div style="border-top:1.5px solid var(--navy);padding-top:.5rem;margin-top:3rem;font-weight:600;color:var(--navy);">Verified by</div><div>Department HOD</div></div>
+    <div><div style="border-top:1.5px solid var(--navy);padding-top:.5rem;margin-top:3rem;font-weight:600;color:var(--navy);">Controller of Examinations</div><div>KCET</div></div>
+  </div>`;
+
+  html+=`</div></div>`;
+  el.innerHTML=html;
+}
+
+function exportReportPDF(){
+  const printArea=document.getElementById('printArea');
+  if(!printArea){alert('Generate a report first.');return;}
+  const win=window.open('','_blank');
+  win.document.write(`<html><head><title>Exam Report – KCET</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'DM Sans',sans-serif;padding:0;color:#1a1a2e;}
+    .report-letterhead{background:#0f2344;color:#fff;padding:2rem 2.5rem;text-align:center;}
+    .lh-emblem{width:60px;height:60px;border-radius:50%;background:#c9a84c;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:1.5rem;color:#0f2344;margin:0 auto 1rem;border:3px solid rgba(255,255,255,.2);}
+    .lh-college{font-family:'DM Serif Display',serif;font-size:1.35rem;}
+    .lh-sub{font-size:.83rem;color:#a8b8d0;margin-top:.3rem;}
+    .lh-dept{font-size:.88rem;color:#f0d080;margin-top:.2rem;font-weight:600;}
+    hr.lh-divider{border:none;border-top:1px solid rgba(255,255,255,.2);margin:.8rem 0;}
+    .lh-report-title{font-size:1rem;font-weight:700;}
+    .lh-meta{font-size:.75rem;color:#a8b8d0;margin-top:.3rem;}
+    .report-body{padding:2rem 2.5rem;}
+    .report-section{margin-bottom:1.5rem;}
+    .report-section-title{font-family:'DM Serif Display',serif;font-size:.95rem;color:#0f2344;border-bottom:2px solid #c9a84c;padding-bottom:.35rem;margin-bottom:.8rem;}
+    .report-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1rem;}
+    .rs-card{border:1px solid #e8e4dc;border-radius:8px;padding:.8rem;text-align:center;}
+    .rs-val{font-family:'DM Serif Display',serif;font-size:1.6rem;color:#0f2344;}
+    .rs-label{font-size:.68rem;color:#6b6b80;text-transform:uppercase;letter-spacing:.4px;margin-top:.2rem;}
+    table{width:100%;border-collapse:collapse;font-size:.78rem;}
+    th{background:#0f2344;color:#fff;padding:.5rem .8rem;text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.4px;}
+    td{padding:.45rem .8rem;border:1px solid #e8e4dc;}
+    tr:nth-child(even){background:#f9f7f3;}
+    .sign-row{margin-top:2rem;border-top:1px solid #e8e4dc;padding-top:1rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:2rem;font-size:.78rem;color:#6b6b80;text-align:center;}
+    .sign-line{border-top:1.5px solid #0f2344;padding-top:.4rem;margin-top:2rem;font-weight:600;color:#0f2344;}
+    @media print{@page{margin:1.5cm;size:A4;}button{display:none!important;}}
+  </style></head><body>
+  ${printArea.innerHTML}
+  <div style="text-align:center;margin:1.5rem 0;">
+    <button onclick="window.print()" style="padding:.6rem 2rem;background:#0f2344;color:#fff;border:none;border-radius:6px;font-size:.88rem;cursor:pointer;font-weight:600;">🖨 Print / Save as PDF</button>
+  </div>
+  </body></html>`);
+  win.document.close();
+  setTimeout(()=>win.print(),800);
+}
+
+// ── EXCEL EXPORTS ──────────────────────────────────────────
+function exportCSV(){
+  const data=filteredData.length?filteredData:allData;
+  const headers=['S.No','Faculty Name','Department','Year','Semester','Course Code','Course Name','Exam Date','Session','Excel Link','Word Link','Status'];
+  const rows=data.map((r,i)=>[i+1,r.facultyName,r.department,r.year,r.semester,r.courseCode,`"${r.courseName}"`,r.examDate,r.session,r.excelLink||'',r.wordLink||'',(r.excelLink&&r.wordLink)?'Complete':'Partial']);
+  const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`ExamSubmissions_${new Date().toISOString().split('T')[0]}.csv`;a.click();URL.revokeObjectURL(url);
+}
+
+function exportExcelFull(){
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
+  const data=filteredData.length?filteredData:allData;
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1: All Submissions
+  const ws1Data=[
+    ['KAMARAJ COLLEGE OF ENGINEERING AND TECHNOLOGY'],
+    ['(An Autonomous Institution) — Controller of Examination Office'],
+    ['Practical End Semester — All Submission Records'],
+    [`Generated: ${new Date().toLocaleString('en-IN')}`],
+    [],
+    ['S.No','Faculty Name','Department','Year','Semester','Course Code','Course Name','Exam Date','Session','Name List (Excel)','Question (Word)','Status'],
+    ...data.map((r,i)=>[i+1,r.facultyName,r.department,r.year,r.semester,r.courseCode,r.courseName,r.examDate,r.session,r.excelLink||'',r.wordLink||'',(r.excelLink&&r.wordLink)?'Complete':'Partial'])
+  ];
+  const ws1=XLSX.utils.aoa_to_sheet(ws1Data);
+  ws1['!cols']=[{wch:6},{wch:22},{wch:14},{wch:6},{wch:8},{wch:12},{wch:30},{wch:12},{wch:8},{wch:50},{wch:50},{wch:12}];
+  ws1['!merges']=[{s:{r:0,c:0},e:{r:0,c:11}},{s:{r:1,c:0},e:{r:1,c:11}},{s:{r:2,c:0},e:{r:2,c:11}},{s:{r:3,c:0},e:{r:3,c:11}}];
+  XLSX.utils.book_append_sheet(wb,ws1,'All Submissions');
+
+  // Sheet 2: Dept Summary
+  const depts=[...new Set(data.map(r=>r.department))].sort();
+  const ws2Data=[
+    ['KAMARAJ COLLEGE OF ENGINEERING AND TECHNOLOGY'],
+    ['Department-wise Compliance Summary'],
+    [],
+    ['Department','Total','FN Sessions','AN Sessions','Complete','Partial','Compliance %'],
+    ...depts.map(d=>{
+      const rows=data.filter(r=>r.department===d);
+      const done=rows.filter(r=>r.excelLink&&r.wordLink).length;
+      return [d,rows.length,rows.filter(r=>r.session==='FN').length,rows.filter(r=>r.session==='AN').length,done,rows.length-done,rows.length?Math.round((done/rows.length)*100)+'%':'0%'];
+    })
+  ];
+  const ws2=XLSX.utils.aoa_to_sheet(ws2Data);
+  ws2['!cols']=[{wch:18},{wch:8},{wch:12},{wch:12},{wch:10},{wch:10},{wch:14}];
+  ws2['!merges']=[{s:{r:0,c:0},e:{r:0,c:6}},{s:{r:1,c:0},e:{r:1,c:6}}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Dept Summary');
+
+  // Sheet 3: FN only
+  const fnData=data.filter(r=>r.session==='FN');
+  const ws3Data=[['Forenoon (FN) Session Submissions'],['S.No','Faculty','Department','Year','Sem','Course Code','Course Name','Date','Name List','Question','Status'],...fnData.map((r,i)=>[i+1,r.facultyName,r.department,r.year,r.semester,r.courseCode,r.courseName,r.examDate,r.excelLink?'Uploaded':'Missing',r.wordLink?'Uploaded':'Missing',(r.excelLink&&r.wordLink)?'Complete':'Partial'])];
+  const ws3=XLSX.utils.aoa_to_sheet(ws3Data);
+  XLSX.utils.book_append_sheet(wb,ws3,'FN Sessions');
+
+  // Sheet 4: AN only
+  const anData=data.filter(r=>r.session==='AN');
+  const ws4Data=[['Afternoon (AN) Session Submissions'],['S.No','Faculty','Department','Year','Sem','Course Code','Course Name','Date','Name List','Question','Status'],...anData.map((r,i)=>[i+1,r.facultyName,r.department,r.year,r.semester,r.courseCode,r.courseName,r.examDate,r.excelLink?'Uploaded':'Missing',r.wordLink?'Uploaded':'Missing',(r.excelLink&&r.wordLink)?'Complete':'Partial'])];
+  const ws4=XLSX.utils.aoa_to_sheet(ws4Data);
+  XLSX.utils.book_append_sheet(wb,ws4,'AN Sessions');
+
+  XLSX.writeFile(wb,`KCET_ExamReport_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
+function exportReportExcel(){
+  if(!currentReportData.length){alert('Generate a report first.');return;}
+  if(typeof XLSX==='undefined'){alert('Excel library not loaded.');return;}
+  const data=currentReportData;
+  const date=currentReportDate;
+  const dept=currentReportDept;
+  const wb=XLSX.utils.book_new();
+
+  const headerRows=[
+    ['KAMARAJ COLLEGE OF ENGINEERING AND TECHNOLOGY'],
+    ['(An Autonomous Institution)'],
+    ['Controller of Examination Office'],
+    ['Practical End Semester Examination — Submission Report'],
+    [`Date: ${formatDate(date)}${dept?' | Dept: '+dept:' | All Departments'}`],
+    [`Generated: ${new Date().toLocaleString('en-IN')}`],
+    []
+  ];
+
+  // Summary
+  const complete=data.filter(r=>r.excelLink&&r.wordLink).length;
+  const summaryRows=[
+    ['EXECUTIVE SUMMARY'],
+    ['Total Submissions',data.length,'FN Sessions',data.filter(r=>r.session==='FN').length,'AN Sessions',data.filter(r=>r.session==='AN').length],
+    ['Complete',complete,'Partial',data.length-complete,'Compliance %',data.length?Math.round((complete/data.length)*100)+'%':'0%'],
+    ['Departments',[...new Set(data.map(r=>r.department))].length,'Faculty',[...new Set(data.map(r=>r.facultyName))].length,'',''],
+    []
+  ];
+
+  const tableHeader=['S.No','Course Code','Course Name','Department','Year','Sem','Faculty','Session','Name List','Question','Status'];
+  const tableRows=data.sort((a,b)=>a.department.localeCompare(b.department)).map((r,i)=>[
+    i+1,r.courseCode,r.courseName,r.department,r.year,r.semester,r.facultyName,r.session,
+    r.excelLink?'✓ Uploaded':'✗ Missing',r.wordLink?'✓ Uploaded':'✗ Missing',(r.excelLink&&r.wordLink)?'Complete':'Partial'
+  ]);
+
+  const wsData=[...headerRows,...summaryRows,tableHeader,...tableRows];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:6},{wch:12},{wch:30},{wch:14},{wch:6},{wch:6},{wch:22},{wch:8},{wch:14},{wch:14},{wch:10}];
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:10}},{s:{r:1,c:0},e:{r:1,c:10}},{s:{r:2,c:0},e:{r:2,c:10}},{s:{r:3,c:0},e:{r:3,c:10}},{s:{r:4,c:0},e:{r:4,c:10}},{s:{r:5,c:0},e:{r:5,c:10}}];
+  XLSX.utils.book_append_sheet(wb,ws,'Report');
+
+  // Dept sheet
+  const depts=[...new Set(data.map(r=>r.department))].sort();
+  const deptWsData=[['Department-wise Compliance'],['Department','Total','FN','AN','Complete','Partial','Compliance %'],...depts.map(d=>{
+    const rows=data.filter(r=>r.department===d);
+    const done=rows.filter(r=>r.excelLink&&r.wordLink).length;
+    return [d,rows.length,rows.filter(r=>r.session==='FN').length,rows.filter(r=>r.session==='AN').length,done,rows.length-done,rows.length?Math.round((done/rows.length)*100)+'%':'0%'];
+  })];
+  const deptWs=XLSX.utils.aoa_to_sheet(deptWsData);
+  XLSX.utils.book_append_sheet(wb,deptWs,'Dept Compliance');
+
+  XLSX.writeFile(wb,`KCET_Report_${date}.xlsx`);
+}
+
+// ── HELPERS ─────────────────────────────────────────────────
+function formatDate(d){
+  if(!d) return '';
+  try{
+    const dt=new Date(d+'T00:00:00');
+    return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  }catch(e){return d;}
+}
+</script>
+</body>
+</html>
